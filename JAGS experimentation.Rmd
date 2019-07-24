@@ -1,0 +1,183 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+# Inference of normally distributed data
+```{r}
+N <- 1000
+x <- rnorm(N, 0, 5)
+
+write.table(x,
+            file = 'example1.data',
+            row.names = FALSE,
+            col.names = FALSE)
+
+
+
+library('rjags')
+
+jags <- jags.model('example1_model.txt',
+                   data = list('x' = x,
+                               'N' = N),
+                   n.chains = 4,
+                   n.adapt = 100)
+
+update(jags, 1000)
+
+samples <-jags.samples(jags,
+             c('mu', 'tau'),
+             1000)
+```
+
+
+
+# Linear regression
+```{r}
+N <- 1000
+x <- 1:N
+epsilon <- rnorm(N, 0, 1)
+y <- x + epsilon
+ 
+write.table(data.frame(X = x, Y = y, Epsilon = epsilon),
+            file = 'example2.data',
+            row.names = FALSE,
+            col.names = TRUE)
+
+
+library('rjags')
+ 
+jags <- jags.model('example2_model.txt',
+                   data = list('x' = x,
+                               'y' = y,
+                               'N' = N),
+                   n.chains = 4,
+                   n.adapt = 100)
+ 
+update(jags, 1000)
+ 
+jags.samples(jags,
+             c('a', 'b'),
+             1000)
+```
+
+# One dimensional logistic regression
+```{r}
+N <- 1000
+x <- 1:N
+z <- 0.01 * x - 5
+y <- sapply(1 / (1 + exp(-z)), function(p) {rbinom(1, 1, p)})
+ 
+write.table(data.frame(X = x, Z = z, Y = y),
+            file = 'example3.data',
+            row.names = FALSE,
+            col.names = TRUE)
+
+library('rjags')
+ 
+jags <- jags.model('example3_model.txt',
+                   data = list('x' = x,
+                               'y' = y,
+                               'N' = N),
+                   n.chains = 4,
+                   n.adapt = 100)
+ 
+update(jags, 1000)
+ 
+jags.samples(jags,
+             c('a', 'b'),
+             1000)
+```
+
+# Another normally ditributed data
+textConnection allows to write model directly in R without creating .txt file
+```{r}
+set.seed(432104)
+n <- 1000
+x <- rnorm(n, 0, 5)
+
+model1.string <-"
+  model {
+    for (i in 1:N){
+    x[i] ~ dnorm(mu, tau)
+    }
+  mu ~ dnorm(0,.0001)
+  tau <- pow(sigma, -2)
+  sigma ~ dunif(0,100)
+}
+"
+model1.spec<-textConnection(model1.string)
+
+jags <- jags.model(model1.spec,
+                   data = list('x' = x,
+                               'N' = n),
+                   n.chains=4,
+                   n.adapt=100)
+
+update(jags, 1000)
+
+jags.samples(jags,
+             c('mu', 'tau'),
+             1000)
+```
+
+# Random effects model
+
+precision parameter tau
+```{r}
+data <-read.csv('data1.csv')
+
+##### Values for simulation
+N <- length(data$y) # There are 7 total studies. 
+
+##### load libraries
+library(rjags)
+library(coda)
+
+##### now prepare dat for JAGS
+## N is the number of entries (e.g., 7)
+## y is the outcome in the data (e.g., ln(OR))
+## V is the variance in the data
+dat <- list("N" = N, "y" = data$y, "V" = data$V)  # names list of numbers
+
+##### Initial values
+inits <- list( d = 0.0, tau = 1, delta = c (0, 0, 0, 0, 0, 0, 0) )
+
+cat("model
+    {
+
+    for (i in 1:N) {
+    
+    y[i] ~ dnorm( delta[i], P[i] )
+
+    delta[i] ~ dnorm( d, prec )
+
+    P[i] <- 1/V[i]
+
+    }
+
+    ### Define the priors
+    d ~ dnorm( 0, 0.00001 )
+    tau ~ dunif( 0, 10 )
+    tau.sq <- tau * tau
+    prec <- 1 / tau.sq
+  
+    ### Transform ln(OR) into OR
+    OR <- exp ( d )
+
+    }", file="aspirinRE2.txt")
+
+jags.m <- jags.model( file = "aspirinRE2.txt", data=dat, inits=inits, n.chains=1, n.adapt=500 )
+
+params <- c("d", "OR", "tau")
+
+samps <- coda.samples( jags.m, params, n.iter=10000 )
+
+summary(samps)
+```
+
+```{r}
+plot(samps)
+```
+
