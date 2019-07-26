@@ -1,10 +1,6 @@
 k <- 5
 n <- 10
 
-data <- list("k", "n")
-
-library(jags)
-
 cat("model
 {
   theta ~ dbeta(1,1) 
@@ -17,13 +13,21 @@ myinits <- list(
   list(theta = 0.9)
 )
 
-jags <- jags.model(file = 'rate1.txt',
-                   data = data,
+library(rjags)
+jags.m <- jags.model(file = 'rate1.txt',
+                   data = list("k"=k,
+                               "n"=n),
                    inits = myinits,
                    n.chains = 2,
                    n.adapt = 100)
 
 parameters <- c("theta")
 
-samps <- coda.samples( jags.model, parameters, 
-                       n.iter=10000 )
+samps <- coda.samples( jags.m, 
+                       parameters, 
+                       n.iter=2000,
+                       n.burnin=1,
+                       n.thin=1)
+
+library(bayesplot)
+mcmc_dens_overlay(samps)

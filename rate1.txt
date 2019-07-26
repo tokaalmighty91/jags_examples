@@ -1,0 +1,6 @@
+model
+{
+  theta ~ dbeta(1,1) 
+  k ~ dbin(theta,n)
+  
+}
