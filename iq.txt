@@ -1,0 +1,14 @@
+ model
+{
+    for (i in 1:n){
+        for (j in 1:m){
+            x[i,j] ~ dnorm(mu[i], lambda)
+      }
+    }
+    
+    sigma ~ dunif(0, 100)
+    lambda <- 1/pow(sigma, 2)
+    for (i in 1:n){
+        mu[i] ~ dnorm(100, .0044)
+    }
+}

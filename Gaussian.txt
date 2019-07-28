@@ -2,7 +2,7 @@ model{
   for (i in 1:n){
     x[i] ~ dnorm(mu, lambda)
   }
-  mu ~ dnorm(0, .001)
-  sigma ~ dunif(0, 10)
+  mu ~ dnorm(5, .25)
+  sigma ~ dnorm(2, .001)
   lambda <- 1/pow(sigma,2)
 }
